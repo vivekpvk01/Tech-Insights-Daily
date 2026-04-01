@@ -1,31 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tech Insights Daily</title>
+  <title>Blogs</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { font-family: Arial; max-width: 800px; margin: auto; }
+    .post { cursor: pointer; margin: 10px 0; color: blue; }
+    .card { border-bottom: 1px solid #ddd; padding: 10px 0; }
+    img { width: 100%; border-radius: 10px; margin: 20px 0; }
+    h1 { margin-top: 20px; }
+  </style>
 </head>
 <body>
-  <h1>🚀 Tech Insights Daily</h1>
-  <div id="posts"></div>
 
-  <script>
-    async function loadPosts() {
-      const response = await fetch("https://api.github.com/repos/vivekpvk01/Tech-Insights-Daily/contents/posts");
-      const files = await response.json();
+<h1>📰 Blogs</h1>
+<a href="index.html">← Back to Tools</a>
 
-      const container = document.getElementById("posts");
+<div id="list"></div>
+<hr>
+<div id="viewer"></div>
 
-      files.forEach(file => {
-        const postLink = document.createElement("a");
-        postLink.href = file.html_url;
-        postLink.innerText = file.name.replace(".md", "");
-        postLink.style.display = "block";
-        postLink.style.margin = "10px 0";
+<script>
+const repo = "vivekpvk01/Tech-Insights-Daily";
 
-        container.appendChild(postLink);
-      });
+async function loadPosts() {
+  const res = await fetch(`https://api.github.com/repos/${repo}/contents/posts`);
+  const files = await res.json();
+
+  const list = document.getElementById("list");
+
+  for (let file of files) {
+    const res = await fetch(file.download_url);
+    const text = await res.text();
+
+    // Extract frontmatter
+    const frontmatterMatch = text.match(/---([\s\S]*?)---/);
+    let title = file.name.replace(".md", "");
+    let image = "";
+
+    if (frontmatterMatch) {
+      const fm = frontmatterMatch[1];
+
+      const titleMatch = fm.match(/title:\s*"(.*?)"/);
+      const imageMatch = fm.match(/featured_image:\s*"(.*?)"/);
+
+      if (titleMatch) title = titleMatch[1];
+      if (imageMatch) image = imageMatch[1];
     }
 
-    loadPosts();
-  </script>
+    // Create card
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <h3>${title}</h3>
+      ${image ? `<img src="${image}">` : ""}
+    `;
+
+    card.onclick = () => loadPost(file.download_url);
+
+    list.appendChild(card);
+  }
+}
+
+async function loadPost(url) {
+  const res = await fetch(url);
+  let text = await res.text();
+
+  // Remove frontmatter
+  text = text.replace(/---[\s\S]*?---/, "");
+
+  const html = marked.parse(text);
+
+  document.getElementById("viewer").innerHTML = html;
+
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+loadPosts();
+</script>
+
 </body>
 </html>
